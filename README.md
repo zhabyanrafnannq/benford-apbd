@@ -25,7 +25,9 @@ data DJPK sendiri. Proyek ini menutup alur itu: unduh, rapikan, uji, peringkat, 
 
 Kedua endpoint mengembalikan SpreadsheetML (bukan CSV murni) dan formatnya berubah dari
 tahun ke tahun, jadi parser disusun toleran: hierarki akun dibaca dari indentasi label
-kalau ada, atau dari postur kanonik APBD kalau file datar.
+kalau ada, atau dari peta postur yang dipilih sesuai era file (era 2017 ke atas dan era
+2011-2016 memakai nama akun berbeda, keduanya dipetakan agar nilai induk tidak dihitung
+ganda).
 
 Catatan: data.go.id sebelumnya dipakai sebagai sumber cadangan, tetapi CKAN API-nya sudah
 tidak tersedia (HTTP 404 saat pengecekan 2026-11), jadi fallback belum diaktifkan di kode.

@@ -61,6 +61,53 @@ def test_akar_postur_bukan_daun():
     assert [leaf for _, _, leaf in hasil] == [False, False, True]
 
 
+def test_postur_era_lama_2015_induk_tidak_ikut_pool(tmp_path):
+    """File era lama memakai label Pendapatan/Belanja/Pembiayaan dan Dana Perimbangan.
+
+    Induk dan akar harus dikeluarkan dari pool meski peta postur sekarang tidak
+    mengenalinya, supaya nilai tidak dihitung ganda.
+    """
+    baris = [
+        (" Pendapatan", "894010497372510"),
+        (" PAD", "215080305653090"),
+        (" Pajak Daerah", "157664905013230"),
+        (" Dana Perimbangan", "499969389426790"),
+        (" DBH", "109157401047440"),
+        (" DAU", "355233798417700"),
+        (" Belanja", "958137939440580"),
+        (" Belanja Tidak Langsung", "504390817164110"),
+        (" Belanja Bunga", "343484148577"),
+        (" Pembiayaan", "92173470894975"),
+        (" Penyertaan Modal", "-10729171051782"),
+    ]
+    xml_rows = "\n".join(
+        f'<Row><Cell><Data ss:Type="String">{label}</Data></Cell>'
+        f'<Cell><Data ss:Type="Number">{angka}</Data></Cell></Row>'
+        for label, angka in baris
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" '
+        'xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Table>' + xml_rows + "</Table></Workbook>"
+    )
+    rows = parse_spreadsheetml(tulis_xml(tmp_path, "lama.xml", xml))
+    recs = normalize_rows(rows, "apbd")
+    by_label = {r["akun"]: r["is_leaf"] for r in recs}
+    for induk in ["Pendapatan", "PAD", "Dana Perimbangan", "Belanja", "Belanja Tidak Langsung", "Pembiayaan"]:
+        assert by_label[induk] is False, induk
+    for daun in ["Pajak Daerah", "DBH", "DAU", "Belanja Bunga", "Penyertaan Modal"]:
+        assert by_label[daun] is True, daun
+
+
+def test_postur_era_lama_tidak_mengganggu_file_era_baru(tmp_path):
+    """Label baru tetap diproses dengan postur sekarang saat keduanya dicampur."""
+    rows = parse_spreadsheetml(tulis_xml(tmp_path, "x.xml", XML_APBD))
+    recs = normalize_rows(rows, "apbd")
+    by_label = {r["akun"]: r["is_leaf"] for r in recs}
+    assert by_label["Pendapatan Daerah"] is False
+    assert by_label["Pajak Daerah"] is True
+
+
 def test_parse_spreadsheetml_dan_dedup(tmp_path):
     rows = parse_spreadsheetml(tulis_xml(tmp_path, "x.xml", XML_APBD))
     assert len(rows) == 5  # header dibuang, baris duplikat masih ada di tahap parse

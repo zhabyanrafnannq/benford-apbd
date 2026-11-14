@@ -5,14 +5,25 @@ import sys
 from pathlib import Path
 
 from .analyze import GROUP_KEYS, nama_analisis, pilih_sumber, run_analysis
-from .djpk import cached_selections, fetch_scope, load_tidy
+from .djpk import DjpkError, cached_selections, fetch_scope, load_tidy
 from .report import generate_report
 
 
+def _validasi_apbd(periode: int | None) -> str | None:
+    """Pesan kesalahan untuk periode APBD yang hilang atau di luar 1 sampai 12."""
+    if periode is None:
+        return "dataset apbd wajib menyebut --periode (1 sampai 12)"
+    if not 1 <= periode <= 12:
+        return "--periode harus 1 sampai 12"
+    return None
+
+
 def cmd_fetch(args) -> int:
-    if args.dataset == "apbd" and args.periode is None:
-        print("dataset apbd wajib menyebut --periode (1 sampai 12)", file=sys.stderr)
-        return 2
+    if args.dataset == "apbd":
+        galat = _validasi_apbd(args.periode)
+        if galat:
+            print(galat, file=sys.stderr)
+            return 2
     ok, failed = fetch_scope(
         args.cache,
         args.dataset,
@@ -32,6 +43,11 @@ def cmd_fetch(args) -> int:
 
 
 def cmd_analyze(args) -> int:
+    if args.dataset == "apbd":
+        galat = _validasi_apbd(args.periode)
+        if galat:
+            print(galat, file=sys.stderr)
+            return 2
     tidy = load_tidy(args.cache, args.dataset, args.tahun, args.periode)
     hasil = run_analysis(
         tidy,
@@ -55,6 +71,11 @@ def cmd_analyze(args) -> int:
 
 
 def cmd_report(args) -> int:
+    if args.dataset == "apbd":
+        galat = _validasi_apbd(args.periode)
+        if galat:
+            print(galat, file=sys.stderr)
+            return 2
     tidy = load_tidy(args.cache, args.dataset, args.tahun, args.periode)
     hasil = run_analysis(
         tidy,
@@ -155,7 +176,11 @@ def main(argv=None) -> int:
     c.set_defaults(func=cmd_cache)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (DjpkError, ValueError) as err:
+        print(f"error: {err}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

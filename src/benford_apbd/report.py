@@ -64,10 +64,18 @@ def _judul_kelompok(group: str, row: pd.Series) -> str:
 
 
 def _tabel_markdown(df: pd.DataFrame) -> str:
-    """Tabel markdown tanpa bergantung pada tabulate; angka 4 desimal."""
+    """Tabel markdown tanpa bergantung pada tabulate.
+
+    P-value kecil pakai format ilmiah supaya tidak tampil 0.0000, dan NaN
+    (misal kolom angka bulat pada TKDD) tampil sebagai garis, bukan nan.
+    """
     cols = list(df.columns)
     def fmt(v):
         if isinstance(v, float):
+            if np.isnan(v):
+                return "-"
+            if v != 0 and abs(v) < 1e-4:
+                return f"{v:.2e}"
             return f"{v:.4f}"
         return str(v)
     rows = [[fmt(v) for v in df[c]] for c in cols]

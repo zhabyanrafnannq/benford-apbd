@@ -12,6 +12,7 @@ kanonik di bawah yang menentukan induk-anak.
 
 import json
 import re
+import sys
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -81,19 +82,101 @@ POSTUR_APBD = {
     ],
 }
 
+# Postur era lama (sekitar 2011-2016) menurut file nasional 2015: label akar dan
+# induk berbeda, dan beberapa kelompok tidak diurai lengkap oleh ekspor. Anak yang
+# tidak tercantum tetap dihitung sebagai daun; induk selalu dikecualikan.
+POSTUR_APBD_LAMA = {
+    "Pendapatan": [
+        (
+            "PAD",
+            [
+                "Pajak Daerah",
+                "Retribusi Daerah",
+                "Hasil Pengelolaan Kekayaan Daerah yang Dipisahkan",
+                "Lain-Lain PAD yang Sah",
+            ],
+        ),
+        ("Dana Perimbangan", ["DBH", "DAU", "DAK"]),
+        (
+            "Pendapatan Lainnya",
+            [
+                "Hibah",
+                "Dana Darurat",
+                "Bagi Hasil Provinsi atau Pemda Lain",
+                "Dana Penyesuaian dan Otsus",
+                "Bantuan Keuangan",
+            ],
+        ),
+    ],
+    "Belanja": [
+        ("Belanja Tidak Langsung", ["Belanja Pegawai Tidak Langsung", "Belanja Bunga"]),
+        (
+            "Belanja Langsung",
+            [
+                "Belanja Pegawai Langsung",
+                "Belanja Barang Jasa",
+                "Belanja Modal",
+                "Belanja Subsidi",
+                "Belanja Hibah",
+                "Belanja Bantuan Sosial",
+                "Belanja Bagi Hasil",
+                "Belanja Bantuan Keuangan",
+                "Belanja Tidak Terduga",
+            ],
+        ),
+    ],
+    "Pembiayaan": [
+        (
+            "Penerimaan Pembiayaan",
+            [
+                "SiLPA TA Sebelumnya",
+                "Pencairan Dana Cadangan",
+                "Penjualan Kekayaan Daerah yang Dipisahkan",
+                "Penerimaan Pinjaman Daerah",
+                "Penerimaan Kembali Pemberian Pinjaman",
+            ],
+        ),
+        (
+            "Pengeluaran Pembiayaan",
+            [
+                "Pembentukan Dana Cadangan",
+                "Penyertaan Modal",
+                "Pembayaran Pokok Utang",
+                "Pemberian Pinjaman Daerah",
+                "Pembayaran Kegiatan Lanjutan",
+                "Pengeluaran Perhitungan Pihak Ketiga",
+            ],
+        ),
+    ],
+}
+
 _SKALA_SATUAN = {"m": 1e9, "t": 1e12}  # satuan Miliar / Triliun pada TKDD
 
 
-def akun_paths_postur() -> dict[str, str]:
+def _pilih_postur(labels: set[str]) -> dict:
+    """Pilih postur era mana punya berdasar label akar yang muncul di file."""
+    if "Pendapatan Daerah" in labels or "Belanja Daerah" in labels:
+        return POSTUR_APBD
+    if "Pendapatan" in labels or "Belanja" in labels:
+        return POSTUR_APBD_LAMA
+    return POSTUR_APBD
+
+
+def _akun_paths(postur: dict) -> dict[str, str]:
     """Peta label akun ke jalur lengkapnya; akar dan induk juga terdaftar."""
     paths = {}
-    for root, groups in POSTUR_APBD.items():
+    for root, groups in postur.items():
         paths.setdefault(root, root)
         for parent, children in groups:
             paths.setdefault(parent, f"{root} > {parent}")
             for child in children:
                 paths[child] = f"{root} > {parent} > {child}"
     return paths
+
+
+def akun_paths_postur() -> dict[str, str]:
+    """Jalur akun postur sekarang; untuk pemakai luar yang butuh peta label."""
+    return _akun_paths(POSTUR_APBD)
 
 
 class DjpkError(RuntimeError):
@@ -189,22 +272,24 @@ def _leaf_by_indent(rows: list[AccountRow]) -> list[bool]:
     return out
 
 
-def _parent_labels() -> set[str]:
-    parents = set(POSTUR_APBD)
-    for groups in POSTUR_APBD.values():
+def _parent_labels(postur: dict) -> set[str]:
+    parents = set(postur)
+    for groups in postur.values():
         for parent, children in groups:
             if children:
                 parents.add(parent)
     return parents
 
 
-def _annotate_flat_apbd(rows: list[AccountRow]) -> list[tuple[AccountRow, str, bool]]:
-    """File APBD datar: hierarki diambil dari postur kanonik.
+def _annotate_flat_apbd(rows: list[AccountRow], paths: dict[str, str] | None = None, parents: set[str] | None = None) -> list[tuple[AccountRow, str, bool]]:
+    """File APBD datar: hierarki diambil dari postur kanonik sesuai era file.
 
     Label tak dikenal dianggap daun di bawah induk terakhir yang dikenal.
     """
-    paths = akun_paths_postur()
-    parents = _parent_labels()
+    if paths is None or parents is None:
+        postur = _pilih_postur({r.label for r in rows})
+        paths = _akun_paths(postur)
+        parents = _parent_labels(postur)
     out = []
     last_parent = ""
     for r in rows:
@@ -221,10 +306,11 @@ def normalize_rows(rows: list[AccountRow], dataset: str) -> list[dict]:
     rows = _dedup_consecutive(rows)
     recs = []
     indents = {r.indent for r in rows}
+    postur = _pilih_postur({r.label for r in rows})
+    paths = _akun_paths(postur)
     if dataset == "apbd" and len(indents) <= 1:
-        annotated = _annotate_flat_apbd(rows)
+        annotated = _annotate_flat_apbd(rows, paths, _parent_labels(postur))
     else:
-        paths = akun_paths_postur()
         stack: list[tuple[int, str]] = []
         annotated = []
         leaves = _leaf_by_indent(rows)
@@ -275,7 +361,8 @@ class DjpkClient:
                 self._last_request = time.monotonic()
                 if resp.status_code == 200:
                     return resp.content
-                if resp.status_code in (404, 500):
+                # 403 berarti diblokir atau rate-limit, mencoba ulang tak menolong
+                if resp.status_code in (403, 404, 500):
                     raise DjpkError(f"HTTP {resp.status_code} untuk {url}")
                 last_err = DjpkError(f"HTTP {resp.status_code} untuk {url}")
             except requests.RequestException as err:
@@ -297,6 +384,7 @@ class DjpkClient:
             content = self._get(url)
         except DjpkError:
             if path.exists():
+                print(f"peringatan: unduhan ulang gagal, memakai cache lama {path}", file=sys.stderr)
                 return path
             raise
         path.write_bytes(content)
