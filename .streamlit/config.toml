@@ -1,0 +1,4 @@
+# Tema mengikuti warna aksen grafik laporan (merah bata untuk batang simpangan).
+[theme]
+base = "light"
+primaryColor = "#b3402e"

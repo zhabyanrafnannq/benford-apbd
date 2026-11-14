@@ -546,3 +546,16 @@ def cached_selections(cache_dir) -> list[dict]:
                 if list(tdir.glob("prov*.xml")):
                     out.append({"dataset": dataset, "tahun": int(tdir.name), "periode": None})
     return out
+
+
+def pilih_dir_data(root: Path) -> tuple[Path, str]:
+    """Folder data untuk dashboard: cache penuh dulu, kalau kosong pakai contoh repo.
+
+    Kembalikan (folder, status) dengan status "cache", "contoh", atau "kosong".
+    """
+    root = Path(root)
+    if cached_selections(root / "data"):
+        return root / "data", "cache"
+    if cached_selections(root / "sample"):
+        return root / "sample", "contoh"
+    return root / "data", "kosong"

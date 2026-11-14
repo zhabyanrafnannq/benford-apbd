@@ -75,6 +75,20 @@ Memilih dataset, tahun, kelompok, dan jenis digit; menampilkan peringkat simpang
 grafik digit dengan jalur kesalahan Nigrini 95%. Data yang belum diunduh ditampilkan
 sebagai panduan perintah, bukan halaman kosong.
 
+## Jalankan di Streamlit Community Cloud
+
+Dashboard tidak butuh localhost; ia bisa berjalan di [share.streamlit.io](https://share.streamlit.io):
+
+1. Push repo ini ke GitHub.
+2. Masuk share.streamlit.io dengan akun GitHub, pilih "New app".
+3. Isi repo, branch `main`, main file `dashboard/app.py`, lalu Deploy.
+
+Folder `sample/` membawa potongan unduhan DJPK (sekitar 1,3 MB) sehingga aplikasi cloud
+langsung punya data demo tanpa mengunduh apa pun; dashboard selalu memberi tahu bila
+sedang memakai data contoh. Server cloud berada di luar Indonesia dan portal DJPK kadang
+membatasi akses dari luar negeri, jadi pengunduhan massal sengaja tidak dijalankan dari
+cloud. Dependensi untuk cloud ada di `requirements.txt`.
+
 ## Perintah
 
 | Perintah | Fungsi |

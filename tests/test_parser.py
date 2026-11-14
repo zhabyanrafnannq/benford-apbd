@@ -151,3 +151,26 @@ def test_load_tidy_dari_cache_sintetis(tmp_path):
 def test_load_tidy_tanpa_cache_mengangkat_error(tmp_path):
     with pytest.raises(DjpkError):
         load_tidy(tmp_path, "apbd", 1999, 12)
+
+
+def test_pilih_dir_data_cache_kosong_dan_terisi(tmp_path):
+    from benford_apbd.djpk import pilih_dir_data
+
+    folder, status = pilih_dir_data(tmp_path)
+    assert status == "kosong" and folder == tmp_path / "data"
+
+    adir = tmp_path / "data" / "apbd" / "2025"
+    adir.mkdir(parents=True)
+    (adir / "p12_prov11_pemda01.xml").write_text(XML_APBD, encoding="utf-8")
+    _, status = pilih_dir_data(tmp_path)
+    assert status == "cache"
+
+
+def test_pilih_dir_data_fallback_ke_contoh(tmp_path):
+    from benford_apbd.djpk import pilih_dir_data
+
+    sdir = tmp_path / "sample" / "tkdd" / "2025"
+    sdir.mkdir(parents=True)
+    (sdir / "prov--_pemda--.xml").write_text(XML_TKDD, encoding="utf-8")
+    folder, status = pilih_dir_data(tmp_path)
+    assert status == "contoh" and folder == tmp_path / "sample"

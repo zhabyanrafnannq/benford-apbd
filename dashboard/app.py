@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from benford_apbd.analyze import GROUP_LABEL, GROUP_KEYS, nilai_kelompok, pilih_sumber, run_analysis  # noqa: E402
 from benford_apbd.benford import KIND_LABEL, digit_test  # noqa: E402
-from benford_apbd.djpk import cached_selections, load_tidy  # noqa: E402
+from benford_apbd.djpk import cached_selections, load_tidy, pilih_dir_data  # noqa: E402
 from benford_apbd.report import plot_digit  # noqa: E402
 
 st.set_page_config(page_title="Benford APBD", page_icon=None, layout="wide")
@@ -21,10 +21,10 @@ st.caption(
     "Angka di sini adalah indikasi statistik untuk menentukan prioritas pemeriksaan, bukan tuduhan penyimpangan."
 )
 
-CACHE = ROOT / "data"
-pilihan = cached_selections(CACHE)
+DIR_DATA, ASAL_DATA = pilih_dir_data(ROOT)
+pilihan = cached_selections(DIR_DATA)
 
-if not pilihan:
+if ASAL_DATA == "kosong":
     st.info(
         "Cache masih kosong, jadi belum ada yang bisa dianalisis. Unduh data dulu dari CLI, contoh:\n\n"
         "`benford-apbd fetch apbd --tahun 2025 --periode 12 --scope provinsi`\n\n"
@@ -32,6 +32,11 @@ if not pilihan:
         "`benford-apbd fetch tkdd --tahun 2025 --scope provinsi`"
     )
     st.stop()
+if ASAL_DATA == "contoh":
+    st.caption(
+        "Menampilkan data contoh bawaan repo: potongan unduhan DJPK sekitar 1,3 MB. "
+        "Untuk analisis seluruh pemda, unduh data penuh lewat CLI; hasilnya otomatis dipakai di sini."
+    )
 
 dataset_pilihan = sorted({p["dataset"] for p in pilihan})
 with st.sidebar:
@@ -63,7 +68,7 @@ def jalankan_analisis(cache: str, dataset: str, tahun: int, periode, group: str,
 
 try:
     with st.spinner("Menganalisis data cache..."):
-        tidy, hasil = jalankan_analisis(str(CACHE), dataset, tahun, periode, group, kolom, kind, hanya_daun, sumber)
+        tidy, hasil = jalankan_analisis(str(DIR_DATA), dataset, tahun, periode, group, kolom, kind, hanya_daun, sumber)
 except Exception as err:
     st.error(f"Analisis gagal: {err}")
     st.stop()

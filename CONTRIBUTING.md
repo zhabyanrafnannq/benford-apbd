@@ -34,6 +34,7 @@ ruff check src tests
 | `src/benford_apbd/report.py` | grafik dan laporan markdown |
 | `src/benford_apbd/cli.py` | antarmuka baris perintah |
 | `dashboard/app.py` | Streamlit |
+| `sample/` | potongan unduhan DJPK yang dibawa repo sebagai data demo dashboard cloud |
 | `docs/METODOLOGI.md` | batasan metode dan etika penyampaian |
 
 ## Aturan main

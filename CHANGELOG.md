@@ -18,10 +18,13 @@ Format mengikuti Keep a Changelog; versi mengikuti Semantic Versioning.
 
 ### Ditambahkan
 
+- Folder sample/ berisi potongan unduhan DJPK (1,3 MB) dan fallback dashboard, sehingga
+  aplikasi bisa di-deploy ke Streamlit Community Cloud tanpa cache lokal; dependensi
+  cloud dicantumkan di requirements.txt dan tema di .streamlit/config.toml.
 - Peringatan ke stderr saat --refresh gagal dan cache lama dipakai.
 - Permintaan yang diblokir server (HTTP 403) tidak dicoba ulang.
-- 9 test baru: postur era lama pada file 2015, ketahanan file era baru, format tabel
-  laporan, dan jalur galat CLI.
+- 11 test baru: postur era lama pada file 2015, ketahanan file era baru, format tabel
+  laporan, jalur galat CLI, dan pemilihan folder data dashboard.
 
 ## 0.1.0 - 2026-11-14
 
