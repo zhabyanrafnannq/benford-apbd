@@ -1,5 +1,7 @@
 # benford-apbd
 
+![CI](https://github.com/zhabyanrafnannq/benford-apbd/actions/workflows/ci.yml/badge.svg)
+
 Uji Hukum Benford atas data APBD dan dana desa yang dipublikasikan Portal Data DJPK Kemenkeu.
 Alat ini menghitung kesesuaian digit pertama, digit kedua, dan dua digit pertama terhadap
 distribusi Benford, lalu memeringkat wilayah dan jenis belanja berdasarkan simpangan,
