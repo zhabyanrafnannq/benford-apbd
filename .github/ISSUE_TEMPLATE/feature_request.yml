@@ -1,0 +1,28 @@
+name: Usulan fitur
+description: Usulkan kemampuan baru atau perbaikan metode analisis
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: masalah
+    attributes:
+      label: Masalah yang ingin dipecahkan
+      description: Jelaskan dari sudut pengguna, bukan solusinya dulu
+    validations:
+      required: true
+  - type: textarea
+    id: solusi
+    attributes:
+      label: Solusi yang diusulkan
+    validations:
+      required: true
+  - type: textarea
+    id: alternatif
+    attributes:
+      label: Alternatif yang sudah dipertimbangkan
+  - type: checkboxes
+    id: metodologi
+    attributes:
+      label: Kesepakatan metode
+      options:
+        - label: "Kalau usulan ini mengubah metode statistik, saya siap memperbarui docs/METODOLOGI.md beserta testnya"
+        - label: "Usulan ini tidak menambah beban permintaan ke server DJPK tanpa cache dan jeda"

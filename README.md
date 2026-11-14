@@ -124,6 +124,10 @@ Struktur: `src/benford_apbd/` (benford.py matematika digit, djpk.py klien dan pa
 analyze.py pipeline, report.py laporan, cli.py) dan `dashboard/app.py`. CI di
 `.github/workflows/ci.yml` menjalankan lint dan test pada setiap push.
 
+Mau ikut berkontribusi? Panduan lengkap ada di [CONTRIBUTING.md](CONTRIBUTING.md);
+riwayat versi di [CHANGELOG.md](CHANGELOG.md). Laporan bug dan usulan fitur memakai
+template issue yang tersedia.
+
 ## Lisensi
 
 MIT.

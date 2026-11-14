@@ -1,0 +1,44 @@
+name: Laporan bug
+description: Laporkan perilaku yang tidak benar pada CLI, parser, analisis, atau dashboard
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Isi detail sespesifik mungkin; bug tanpa langkah reproduksi sulit diperbaiki."
+  - type: textarea
+    id: perintah
+    attributes:
+      label: Perintah atau langkah yang dijalankan
+      placeholder: "benford-apbd analyze --dataset apbd --tahun 2025 --periode 12 --group per_pemda"
+    validations:
+      required: true
+  - type: dropdown
+    id: dataset
+    attributes:
+      label: Dataset yang terkait
+      options:
+        - apbd
+        - tkdd
+        - keduanya
+        - tidak terkait dataset
+    validations:
+      required: true
+  - type: textarea
+    id: keluaran
+    attributes:
+      label: Output atau pesan error lengkap
+      placeholder: "Tempel output terminal persis seperti aslinya"
+    validations:
+      required: true
+  - type: input
+    id: lingkungan
+    attributes:
+      label: Lingkungan
+      placeholder: "Python 3.13, Windows 11"
+    validations:
+      required: true
+  - type: textarea
+    id: tambahan
+    attributes:
+      label: Konteks tambahan
+      description: Tangkapan layar dashboard, isi cache (benford-apbd cache), atau dugaan penyebab
