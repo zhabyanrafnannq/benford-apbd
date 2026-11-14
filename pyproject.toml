@@ -1,0 +1,35 @@
+[project]
+name = "benford-apbd"
+version = "0.1.0"
+description = "Uji Benford dan forensik statistik atas data APBD dan dana desa dari Portal Data DJPK Kemenkeu"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.0",
+    "scipy>=1.11",
+    "requests>=2.31",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.4"]
+dashboard = ["streamlit>=1.36"]
+
+[project.scripts]
+benford-apbd = "benford_apbd.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
