@@ -66,6 +66,19 @@ benford-apbd fetch tkdd --tahun 2025 --scope provinsi
 benford-apbd analyze --dataset tkdd --tahun 2025 --group per_provinsi
 ```
 
+## Alur kerja
+
+| Langkah | Perintah | Keluaran |
+| --- | --- | --- |
+| 1. Unduh | `benford-apbd fetch` | `data/raw/` dan `data/ref/` (cache XML dan JSON portal DJPK) |
+| 2. Uji | `benford-apbd analyze` | CSV berperingkat di `data/processed/` |
+| 3. Laporan | `benford-apbd report` | `reports/` berisi laporan markdown plus grafik PNG |
+| 4. Jelajahi | `streamlit run dashboard/app.py` | tampilan interaktif atas cache |
+
+Setiap langkah hanya membaca folder cache, jadi bisa diulang berapa kali tanpa
+mengunduh ulang apa pun. Tanpa cache, dashboard otomatis memakai `sample/` sebagai
+data contoh dan menandainya dengan jelas.
+
 ## Dashboard
 
 ```bash
@@ -91,18 +104,94 @@ sedang memakai data contoh. Server cloud berada di luar Indonesia dan portal DJP
 membatasi akses dari luar negeri, jadi pengunduhan massal sengaja tidak dijalankan dari
 cloud. Dependensi untuk cloud ada di `requirements.txt`.
 
-## Perintah
+## Dokumentasi perintah
 
-| Perintah | Fungsi |
+### `fetch`: unduh data
+
+```bash
+benford-apbd fetch <apbd|tkdd> --tahun 2025 [--periode 12] [--scope provinsi]
+                   [--provinsi 11] [--refresh] [--delay 0.4] [--cache data]
+```
+
+| Opsi | Fungsi |
 | --- | --- |
-| `benford-apbd fetch` | unduh data DJPK ke cache lokal |
-| `benford-apbd analyze` | uji digit per kelompok, keluaran CSV berperingkat |
-| `benford-apbd report` | laporan markdown plus grafik PNG |
-| `benford-apbd cache` | daftar isi cache |
+| `--tahun` | tahun anggaran (portal menyediakan 2011 sampai sekarang) |
+| `--periode` | wajib untuk apbd, 1 sampai 12; 12 berarti satu tahun penuh |
+| `--scope` | `nasional` (1 file), `provinsi` (38 file agregat), `pemda` (sekitar 580 file per pemda) |
+| `--provinsi` | batasi unduhan ke satu kode provinsi, mis. `11` (Jawa Tengah) |
+| `--refresh` | unduh ulang file yang sudah ada di cache |
+| `--delay` | jeda antar permintaan dalam detik (default 0,4; jangan diturunkan) |
 
-Kelompok analisis: `nasional`, `per_provinsi`, `per_pemda`, `per_akun` (misal semua nilai
-"Belanja Modal" lintas pemda). Jenis uji: `first`, `second`, `first_two`. Nilai yang diuji:
-`realisasi` (default) atau `anggaran`.
+Unduhan bersifat cache: file yang sudah ada tidak diunduh ulang, dan lingkup `pemda`
+bisa dilanjutkan bila terputus. Permintaan yang diblokir server (403) atau tak ada
+(404) tidak dicoba ulang; kegagalan dilaporkan di akhir tanpa menghentikan unduhan lain.
+
+### `analyze`: uji digit per kelompok
+
+```bash
+benford-apbd analyze --dataset apbd --tahun 2025 --periode 12 --group per_provinsi
+                     --kolom realisasi --kind first --n-boot 500 --seed 42
+                     [--sumber auto] [-o hasil.csv]
+```
+
+| Opsi | Fungsi |
+| --- | --- |
+| `--group` | `nasional`, `per_provinsi`, `per_pemda`, atau `per_akun` (misal semua nilai "Belanja Modal" lintas pemda) |
+| `--kolom` | nilai yang masuk pool: `realisasi` (default) atau `anggaran` |
+| `--kind` | jenis uji digit: `first`, `second`, `first_two` |
+| `--sumber` | tingkat file yang dipakai: `auto` (default, memilih yang paling rinci), `pemda`, `provinsi`, `nasional` |
+| `--n-boot`, `--seed` | jumlah resampling bootstrap dan benih acak (default 500 dan 42, hasil reproducible) |
+| `--semualevel` | sertakan baris induk postur; menghasilkan simpangan artifisial, tidak disarankan |
+| `-o` | jalur CSV keluaran (default: `data/processed/analisis_*.csv`) |
+
+Contoh keluaran (dipotong):
+
+```
+tingkat file yang dipakai: pemda
+kode_provinsi      nama_provinsi    n    mad  mad_ci95_bawah  ...  kesesuaian   p_value  share_2_nol
+11  Provinsi Jawa Tengah  594  0.0158  0.0118  ...  tidak sesuai  0.0257  0.1599
+```
+
+Kolom penting: `n` (jumlah nilai diuji), `mad` beserta interval bootstrap 95%,
+`kesesuaian` (batas Nigrini), `p_value` (chi-square, ingat: hampir selalu signifikan
+pada n besar), `share_2_nol` (porsi nilai berakhiran minimal dua nol, hanya APBD), dan
+`catatan` (mis. peringatan n < 100).
+
+### `report`: laporan markdown plus grafik
+
+Opsi sama dengan `analyze`, ditambah `--top N` (jumlah grafik kelompok paling
+menyimpang, default 3) dan `--out-dir` (default `reports/`). Keluarannya `laporan.md`
+berisi ringkasan metode, tabel peringkat, grafik digit dengan jalur kesalahan Nigrini
+95%, dan paragraf interpretasi yang menegaskan batas kesimpulan.
+
+### `cache`: daftar isi cache
+
+Menampilkan kombinasi dataset, tahun, dan periode yang siap dianalisis. Contoh:
+
+```
+apbd 2015 periode 12
+apbd 2025 periode 12
+tkdd 2018
+tkdd 2025
+```
+
+## Parameter analisis pada dashboard
+
+Sidebar "Parameter analisis" berisi delapan kontrol yang benar-benar mengubah hasil:
+
+| Kontrol | Pilihan | Fungsi |
+| --- | --- | --- |
+| Dataset | `apbd`, `tkdd` | sumber data yang dianalisis |
+| Tahun | mengikuti isi cache | tahun anggaran |
+| Periode | 1 sampai 12 | hanya untuk APBD; hilang otomatis untuk TKDD |
+| Kelompok | Nasional, Per provinsi, Per pemda, Per jenis akun | cara penggabungan nilai |
+| Nilai yang diuji | `realisasi`, `anggaran` | kolom angka yang masuk pool |
+| Jenis digit | digit pertama, digit kedua, digit pertama-kedua | uji distribusi yang dijalankan |
+| Tingkat file | `auto`, `pemda`, `provinsi`, `nasional` | tingkat cache yang dipakai |
+| Checkbox baris daun | dicentang (default) | hanya akun terdalam postur yang masuk pool |
+
+Di atas tabel hasil selalu ada keterangan tingkat file yang dipakai, dan setiap grafik
+menandai batang yang keluar jalur Nigrini dengan merah bata.
 
 ## Apa yang dihitung
 
@@ -138,13 +227,25 @@ ruff check src tests
 pytest -q
 ```
 
-Struktur: `src/benford_apbd/` (benford.py matematika digit, djpk.py klien dan parser,
-analyze.py pipeline, report.py laporan, cli.py) dan `dashboard/app.py`. CI di
-`.github/workflows/ci.yml` menjalankan lint dan test pada setiap push.
-
 Mau ikut berkontribusi? Panduan lengkap ada di [CONTRIBUTING.md](CONTRIBUTING.md);
 riwayat versi di [CHANGELOG.md](CHANGELOG.md). Laporan bug dan usulan fitur memakai
 template issue yang tersedia.
+
+## Struktur repo
+
+| Jalur | Isi |
+| --- | --- |
+| `src/benford_apbd/benford.py` | matematika digit: chi-square, MAD berbatas Nigrini, bootstrap, angka bulat |
+| `src/benford_apbd/djpk.py` | klien portal DJPK, cache, parser SpreadsheetML, dua varian postur era |
+| `src/benford_apbd/analyze.py` | pooling per kelompok, pemilahan tingkat sumber, peringkat simpangan |
+| `src/benford_apbd/report.py` | grafik digit dan generator laporan markdown |
+| `src/benford_apbd/cli.py` | antarmuka baris perintah |
+| `dashboard/app.py` | Streamlit: parameter analisis, tabel peringkat, grafik |
+| `sample/` | potongan unduhan DJPK (1,3 MB) untuk data demo dashboard cloud |
+| `tests/` | 33 test pytest atas parser, statistik, analisis, CLI, dan laporan |
+| `.github/` | CI (ruff + pytest), template issue dan pull request |
+| `docs/METODOLOGI.md` | batasan metode dan etika penyampaian hasil |
+| `data/`, `reports/` | cache unduhan dan keluaran lokal; di-gitignore, terbentuk saat dijalankan |
 
 ## Lisensi
 
